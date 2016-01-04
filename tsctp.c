@@ -565,6 +565,7 @@ int main(int argc, char **argv)
 			perror("setsockopt");
 		}
 		close(fd);
+		free(buffer);
 		gettimeofday(&now, NULL);
 		timersub(&now, &start_time, &diff_time);
 		seconds = diff_time.tv_sec + (double)diff_time.tv_usec/1000000;
