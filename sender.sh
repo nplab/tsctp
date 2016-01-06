@@ -6,12 +6,12 @@ REMOTE_ADDR="fd68:9c38:be7e::14"
 DURATION="60"
 BUFFER="262144"
 APPENDIX=""
-LOOPS="1"
+RUNS="1"
 
 MSGLENGTH=0
-LOOP=1
+RUNS=1
 
-while [ $LOOP -le $LOOPS]; do
+while [ $RUN -le $RUNS]; do
     while [ $MSGLENGTH -lt 1600 ]; do
         if [ $MSGLENGTH -lt 32 ]; then
             MSGLENGTH=$((MSGLENGTH + 1))
@@ -25,5 +25,5 @@ while [ $LOOP -le $LOOPS]; do
         ./tsctp -T $DURATION -L $LOCAL_ADDR -l $MSGLENGTH -R $BUFFER -S $BUFFER $APPENDIX $REMOTE_ADDR
         sleep 5
     done
-    $LOOP=$((LOOP + 1))
+    $RUN=$((RUN + 1))
 done
