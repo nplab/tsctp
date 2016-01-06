@@ -3,16 +3,17 @@ echo "TSCTP BATCHRUN"
 
 LOCAL_ADDR="fd68:9c38:be7e::13"
 REMOTE_ADDR="fd68:9c38:be7e::14"
-DURATION="60"
-BUFFER="262144"
+DURATION=60
+BUFFER=262144
 APPENDIX=""
-RUNS="1"
+RUNS=1
+MSGLENGTH_MAX=1600
 
 MSGLENGTH=0
-RUNS=1
+RUN=1
 
 while [ $RUN -le $RUNS]; do
-    while [ $MSGLENGTH -lt 1600 ]; do
+    while [ $MSGLENGTH -lt $MSGLENGTH_MAX ]; do
         if [ $MSGLENGTH -lt 32 ]; then
             MSGLENGTH=$((MSGLENGTH + 1))
         elif [ $MSGLENGTH -lt 128 ]; then
