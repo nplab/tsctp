@@ -62,6 +62,9 @@ char Usage[] =
 "        -A      chunk type to authenticate \n"
 "        -D      turns Nagle off\n"
 "        -f      fragmentation point\n"
+#if defined(SCTP_INTERLEAVING_SUPPORTED)
+"        -I      Interleaving\n"
+#endif
 "        -l      size of send/receive buffer\n"
 "        -L      local address\n"
 "        -n      number of messages sent (0 means infinite)/received\n"
@@ -195,6 +198,9 @@ int main(int argc, char **argv)
 	int unordered = 0;
 	int ipv4only = 0;
 	int ipv6only = 0;
+#if defined(SCTP_INTERLEAVING_SUPPORTED)
+	int interleave = 0;
+#endif
 
 	length             = DEFAULT_LENGTH;
 	number_of_messages = DEFAULT_NUMBER_OF_MESSAGES;
@@ -208,7 +214,11 @@ int main(int argc, char **argv)
 #ifdef SCTP_AUTH_CHUNK
 	                               "A:"
 #endif
-	                               "Df:l:L:n:p:R:S:t:T:u"
+	                               "Df:"
+#if defined(SCTP_INTERLEAVING_SUPPORTED)
+                                       "I:"
+#endif
+                                       "l:L:n:p:R:S:t:T:u"
 #ifdef SCTP_REMOTE_UDP_ENCAPS_PORT 
                                    "U:"
 #endif
@@ -230,6 +240,11 @@ int main(int argc, char **argv)
 			case 'f':
 				fragpoint = atoi(optarg);
 				break;
+#if defined(SCTP_INTERLEAVING_SUPPORTED)
+			case 'f':
+				interleave = atoi(optarg);
+				break;
+#endif
 			case 'l':
 				length = atoi(optarg);
 				break;
@@ -400,6 +415,21 @@ int main(int argc, char **argv)
 	encaps.sue_port = htons(udp_port);
 	if (setsockopt(fd, IPPROTO_SCTP, SCTP_REMOTE_UDP_ENCAPS_PORT, (const void*)&encaps, (socklen_t)sizeof(struct sctp_udpencaps)) < 0) {
 		perror("setsockopt");
+	}
+#endif
+#if defined(SCTP_INTERLEAVING_SUPPORTED)
+	if (interleaving != 0) {
+		int level;
+
+		level = 2;
+		if (setsockopt(fd, IPPROTO_SCTP, SCTP_FRAGMENT_INTERLEAVE, (const void*)&level, (socklen_t)sizeof(int)) < 0) {
+			perror("setsockopt");
+		}
+		av.assoc_id = 0;
+		av.assoc_value = 1;
+		if (setsockopt(fd, IPPROTO_SCTP, SCTP_INTERLEAVING_SUPPORTED, (const void*)&av, (socklen_t)sizeof(struct sctp_assoc_value)) < 0) {
+			perror("setsockopt");
+		}
 	}
 #endif
 	if (nr_local_addr > 0) {
