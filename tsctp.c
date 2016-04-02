@@ -241,7 +241,7 @@ int main(int argc, char **argv)
 				fragpoint = atoi(optarg);
 				break;
 #if defined(SCTP_INTERLEAVING_SUPPORTED)
-			case 'f':
+			case 'I':
 				interleave = atoi(optarg);
 				break;
 #endif
@@ -418,7 +418,7 @@ int main(int argc, char **argv)
 	}
 #endif
 #if defined(SCTP_INTERLEAVING_SUPPORTED)
-	if (interleaving != 0) {
+	if (interleave != 0) {
 		int level;
 
 		level = 2;
