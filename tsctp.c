@@ -216,7 +216,7 @@ int main(int argc, char **argv)
 #endif
 	                               "Df:"
 #if defined(SCTP_INTERLEAVING_SUPPORTED)
-                                       "I:"
+                                       "I"
 #endif
                                        "l:L:n:p:R:S:t:T:u"
 #ifdef SCTP_REMOTE_UDP_ENCAPS_PORT 
@@ -242,7 +242,7 @@ int main(int argc, char **argv)
 				break;
 #if defined(SCTP_INTERLEAVING_SUPPORTED)
 			case 'I':
-				interleave = atoi(optarg);
+				interleave = 1;
 				break;
 #endif
 			case 'l':
