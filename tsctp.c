@@ -586,7 +586,7 @@ int main(int argc, char **argv)
 			signal(SIGALRM, stop_sender);
 			alarm(runtime);
 		}
-
+		sid = 0;
 		while (!done && ((number_of_messages == 0) || (i < (number_of_messages - 1)))) {
 			if (very_verbose) {
 				printf("Sending message number %lu.\n", i);
