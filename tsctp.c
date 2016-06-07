@@ -70,6 +70,7 @@ char Usage[] =
 "        -n      number of messages sent (0 means infinite)/received\n"
 "        -p      port number\n"
 "        -R      socket recv buffer\n"
+"        -s      number of streams\n"
 "        -S      socket send buffer\n"
 "        -t      time to live for messages\n"
 "        -T      time to send messages\n"
@@ -201,7 +202,10 @@ int main(int argc, char **argv)
 #if defined(SCTP_INTERLEAVING_SUPPORTED)
 	int interleave = 0;
 #endif
+	uint16_t streams, sid;
+	struct sctp_initmsg init;
 
+	streams            = 1;
 	length             = DEFAULT_LENGTH;
 	number_of_messages = DEFAULT_NUMBER_OF_MESSAGES;
 	port               = DEFAULT_PORT;
@@ -218,7 +222,7 @@ int main(int argc, char **argv)
 #if defined(SCTP_INTERLEAVING_SUPPORTED)
                                        "I"
 #endif
-                                       "l:L:n:p:R:S:t:T:u"
+                                       "l:L:n:p:R:s:S:t:T:u"
 #ifdef SCTP_REMOTE_UDP_ENCAPS_PORT 
                                    "U:"
 #endif
@@ -284,6 +288,9 @@ int main(int argc, char **argv)
 				break;
 			case 'R':
 				rcvbufsize = atoi(optarg);
+				break;
+			case 's':
+				streams = atoi(optarg);
 				break;
 			case 'S':
 				sndbufsize = atoi(optarg);
@@ -405,6 +412,13 @@ int main(int argc, char **argv)
 		if (setsockopt(fd, IPPROTO_SCTP, SCTP_ADAPTATION_LAYER, (const void*)&ind, (socklen_t)sizeof(struct sctp_setadaptation)) < 0) {
 			perror("setsockopt");
 		}
+	}
+	init.sinit_num_ostreams = streams;
+	init.sinit_max_instreams = 0xffff;
+	init.sinit_max_attempts = 0;
+	init.sinit_max_init_timeo = 0;
+	if (setsockopt(fd, IPPROTO_SCTP, SCTP_INITMSG, (const void *)&init, (socklen_t)sizeof(struct sctp_initmsg)) < 0) {
+		perror("setsockopt");
 	}
 	if (!client) {
 		setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void*)&on, (socklen_t)sizeof(on));
@@ -577,13 +591,16 @@ int main(int argc, char **argv)
 			if (very_verbose) {
 				printf("Sending message number %lu.\n", i);
 			}
-			if (sctp_sendmsg(fd, buffer, length, NULL, 0, 0, unordered?SCTP_UNORDERED:0, 0, timetolive, 0) < 0) {
+			if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(39), unordered?SCTP_UNORDERED:0, sid, timetolive, 0) < 0) {
 				perror("sctp_sendmsg");
 				break;
 			}
+			if (++sid == streams) {
+				sid = 0;
+			}
 			i++;
 		}
-		if (sctp_sendmsg(fd, buffer, length, NULL, 0, 0, unordered?SCTP_EOF|SCTP_UNORDERED:SCTP_EOF, 0, timetolive, 0) < 0) {
+		if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(39), unordered?SCTP_EOF|SCTP_UNORDERED:SCTP_EOF, sid, timetolive, 0) < 0) {
 			perror("sctp_sendmsg");
 		}
 		i++;
