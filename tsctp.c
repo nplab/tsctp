@@ -188,6 +188,7 @@ int main(int argc, char **argv)
 	int fragpoint = 0;
 	unsigned int timetolive = 0;
 	unsigned int runtime = 0;
+	int policy = 0;
 	struct sctp_setadaptation ind = {0};
 #ifdef SCTP_AUTH_CHUNK
 	unsigned int number_of_chunks_to_auth = 0;
@@ -222,7 +223,7 @@ int main(int argc, char **argv)
 #if defined(SCTP_INTERLEAVING_SUPPORTED)
                                        "I"
 #endif
-                                       "l:L:n:p:R:s:S:t:T:u"
+                                       "l:L:n:p:P:R:s:S:t:T:u"
 #ifdef SCTP_REMOTE_UDP_ENCAPS_PORT 
                                    "U:"
 #endif
@@ -285,6 +286,9 @@ int main(int argc, char **argv)
 				break;
 			case 'p':
 				port = atoi(optarg);
+				break;
+			case 'P':
+				policy = atoi(optarg);
 				break;
 			case 'R':
 				rcvbufsize = atoi(optarg);
@@ -453,6 +457,7 @@ int main(int argc, char **argv)
 
 	if (!client) {
 		struct sctp_event_subscribe event;
+		uint32_t flags;
 
 		if (listen(fd, 100) < 0)
 			perror("listen");
@@ -587,11 +592,32 @@ int main(int argc, char **argv)
 			alarm(runtime);
 		}
 		sid = 0;
+		flags = 0;
+		if (unordered) {
+			flags |= SCTP_UNORDERED;
+		}
+		switch (policy) {
+		case 0:
+			flags |= SCTP_PR_SCTP_NONE;
+			break;
+		case 1:
+			flags |= SCTP_PR_SCTP_TTL;
+			break;
+		case 2:
+			flags |= SCTP_PR_SCTP_RTX;
+			break;
+		case 3:
+			flags |= SCTP_PR_SCTP_PRIO;
+			break;
+		default:
+			printf("Unknown PR-SCTP policy.\n");
+			break;
+		}
 		while (!done && ((number_of_messages == 0) || (i < (number_of_messages - 1)))) {
 			if (very_verbose) {
 				printf("Sending message number %lu.\n", i);
 			}
-			if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(39), unordered?SCTP_UNORDERED:0, sid, timetolive, 0) < 0) {
+			if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(39), flags, sid, timetolive, 0) < 0) {
 				perror("sctp_sendmsg");
 				break;
 			}
@@ -600,7 +626,8 @@ int main(int argc, char **argv)
 			}
 			i++;
 		}
-		if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(39), unordered?SCTP_EOF|SCTP_UNORDERED:SCTP_EOF, sid, timetolive, 0) < 0) {
+		flags |= SCTP_EOF
+		if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(39), flags, sid, timetolive, 0) < 0) {
 			perror("sctp_sendmsg");
 		}
 		i++;
