@@ -457,7 +457,6 @@ int main(int argc, char **argv)
 
 	if (!client) {
 		struct sctp_event_subscribe event;
-		uint32_t flags;
 
 		if (listen(fd, 100) < 0)
 			perror("listen");
@@ -505,6 +504,8 @@ int main(int argc, char **argv)
 		}
 		close(fd);
 	} else {
+		uint32_t flags;
+
 		if (inet_pton(AF_INET6, argv[optind], &remote_addr.s6.sin6_addr)) {
 			remote_addr.s6.sin6_family = AF_INET6;
 #ifdef HAVE_SIN_LEN
@@ -607,7 +608,7 @@ int main(int argc, char **argv)
 			flags |= SCTP_PR_SCTP_RTX;
 			break;
 		case 3:
-			flags |= SCTP_PR_SCTP_PRIO;
+			flags |= SCTP_PR_SCTP_BUF;
 			break;
 		default:
 			printf("Unknown PR-SCTP policy.\n");
@@ -626,7 +627,7 @@ int main(int argc, char **argv)
 			}
 			i++;
 		}
-		flags |= SCTP_EOF
+		flags |= SCTP_EOF;
 		if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(39), flags, sid, timetolive, 0) < 0) {
 			perror("sctp_sendmsg");
 		}
