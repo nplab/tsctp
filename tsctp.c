@@ -592,7 +592,7 @@ int main(int argc, char **argv)
 		memset(buffer, 'A', length);
 
 		gettimeofday(&start_time, NULL);
-		if (verbose) {
+		if (verbose && !very_verbose) {
 			printf("Start sending %ld messages...", (long)number_of_messages);
 			fflush(stdout);
 		}
@@ -646,6 +646,9 @@ int main(int argc, char **argv)
 				sid = 0;
 			}
 			i++;
+		}
+		if (very_verbose && !very_verbose) {
+			printf("Sending message number %lu.\n", i);
 		}
 		flags |= SCTP_EOF;
 		if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(ppid), flags, sid, timetolive, 0) < 0) {
