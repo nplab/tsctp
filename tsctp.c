@@ -647,7 +647,7 @@ int main(int argc, char **argv)
 			}
 			i++;
 		}
-		if (very_verbose && !very_verbose) {
+		if (very_verbose) {
 			printf("Sending message number %lu.\n", i);
 		}
 		flags |= SCTP_EOF;
@@ -655,7 +655,7 @@ int main(int argc, char **argv)
 			perror("sctp_sendmsg");
 		}
 		i++;
-		if (verbose)
+		if (verbose && !very_verbose)
 			printf("done.\n");
 		linger.l_onoff = 1;
 		linger.l_linger = LINGERTIME;
