@@ -151,7 +151,7 @@ static void* handle_connection(void *arg)
 		}
 		flags = 0;
 		len = (socklen_t)0;
-		n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, NULL, &len, NULL, &flags);
+		n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, NULL, &len, &sinfo, &flags);
 	}
 	if (n < 0)
 		perror("sctp_recvmsg");
@@ -483,7 +483,7 @@ int main(int argc, char **argv)
 			}
 		}
 		memset(&event, 0, sizeof(event));
-		event.sctp_data_io_event=1;
+		event.sctp_data_io_event = 1;
 		if (setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
 			perror("set event failed");
 		}
