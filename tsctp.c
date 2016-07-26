@@ -133,7 +133,7 @@ static void* handle_connection(void *arg)
 			notifications++;
 		} else {
 			if (very_verbose) {
-				printf("%s message of length %6zd , PPID = 0x%08x, SID = 0x%04x, SSN = 0x%04x, TSN = 0x%08x, %s.\n",
+				printf("%s message of length %6zd, PPID = 0x%08x, SID = 0x%04x, SSN = 0x%04x, TSN = 0x%08x, %s.\n",
 				       flags & MSG_EOR ? "Final" : "Partial",
 				       n,
 				       ntohl(sinfo.sinfo_ppid),
