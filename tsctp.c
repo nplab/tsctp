@@ -604,7 +604,11 @@ int main(int argc, char **argv)
 			signal(SIGALRM, stop_sender);
 			alarm(runtime);
 		}
-		ppid = 0;
+		if (very_verbose) {
+			ppid = 0;
+		} else {
+			ppid = 39;
+		}
 		sid = 0;
 		flags = 0;
 		if (unordered) {
@@ -631,9 +635,12 @@ int main(int argc, char **argv)
 			if (very_verbose) {
 				printf("Sending message number %lu.\n", i);
 			}
-			if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(ppid++), flags, sid, timetolive, 0) < 0) {
+			if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(ppid), flags, sid, timetolive, 0) < 0) {
 				perror("sctp_sendmsg");
 				break;
+			}
+			if (very_verbose) {
+				ppid += 1;
 			}
 			if (++sid == streams) {
 				sid = 0;
@@ -641,7 +648,7 @@ int main(int argc, char **argv)
 			i++;
 		}
 		flags |= SCTP_EOF;
-		if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(39), flags, sid, timetolive, 0) < 0) {
+		if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(ppid), flags, sid, timetolive, 0) < 0) {
 			perror("sctp_sendmsg");
 		}
 		i++;
