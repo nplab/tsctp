@@ -101,6 +101,7 @@ void stop_sender(int sig)
 
 static void* handle_connection(void *arg)
 {
+	struct sctp_sndrcvinfo sinfo;
 	ssize_t n;
 	unsigned long long sum = 0;
 	char *buf;
@@ -123,7 +124,7 @@ static void* handle_connection(void *arg)
 	buf = malloc(BUFFERSIZE);
 	flags = 0;
 	len = (socklen_t)0;
-	n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, NULL, &len, NULL, &flags);
+	n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, NULL, &len, &sinfo, &flags);
 	gettimeofday(&start_time, NULL);
 	first_length = 0;
 	while (n > 0) {
@@ -131,6 +132,16 @@ static void* handle_connection(void *arg)
 		if (flags & MSG_NOTIFICATION) {
 			notifications++;
 		} else {
+			if (very_verbose) {
+				printf("%s message of length %6zd , PPID = 0x%08x, SID = 0x%04x, SSN = 0x%04x, TSN = 0x%08x, %s.\n",
+				       flags & MSG_EOR ? "Final" : "Partial",
+				       n,
+				       ntohl(sinfo.sinfo_ppid),
+				       sinfo.sinfo_stream,
+				       sinfo.sinfo_ssn,
+				       sinfo.sinfo_tsn,
+				       sinfo.sinfo_flags & SCTP_UNORDERED ? "unordered" : "ordered");
+			}
 			sum += n;
 			if (flags & MSG_EOR) {
 				messages++;
@@ -505,6 +516,7 @@ int main(int argc, char **argv)
 		close(fd);
 	} else {
 		uint32_t flags;
+		uint32_t ppid;
 
 		if (inet_pton(AF_INET6, argv[optind], &remote_addr.s6.sin6_addr)) {
 			remote_addr.s6.sin6_family = AF_INET6;
@@ -592,6 +604,7 @@ int main(int argc, char **argv)
 			signal(SIGALRM, stop_sender);
 			alarm(runtime);
 		}
+		ppid = 0;
 		sid = 0;
 		flags = 0;
 		if (unordered) {
@@ -618,7 +631,7 @@ int main(int argc, char **argv)
 			if (very_verbose) {
 				printf("Sending message number %lu.\n", i);
 			}
-			if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(39), flags, sid, timetolive, 0) < 0) {
+			if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(ppid++), flags, sid, timetolive, 0) < 0) {
 				perror("sctp_sendmsg");
 				break;
 			}
