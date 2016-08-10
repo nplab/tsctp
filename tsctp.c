@@ -621,12 +621,17 @@ int main(int argc, char **argv)
 		case 1:
 			flags |= SCTP_PR_SCTP_TTL;
 			break;
+#ifdef SCTP_PR_SCTP_RTX
 		case 2:
 			flags |= SCTP_PR_SCTP_RTX;
 			break;
+#endif
+#ifdef SCTP_PR_SCTP_BUF
 		case 3:
 			flags |= SCTP_PR_SCTP_BUF;
 			break;
+
+#endif
 		default:
 			printf("Unknown PR-SCTP policy.\n");
 			break;
