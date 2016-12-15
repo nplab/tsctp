@@ -615,11 +615,15 @@ int main(int argc, char **argv)
 			flags |= SCTP_UNORDERED;
 		}
 		switch (policy) {
+#ifdef SCTP_PR_SCTP_NONE
 		case 0:
 			flags |= SCTP_PR_SCTP_NONE;
 			break;
+#endif
 		case 1:
+#ifdef SCTP_PR_SCTP_TTL
 			flags |= SCTP_PR_SCTP_TTL;
+#endif
 			break;
 #ifdef SCTP_PR_SCTP_RTX
 		case 2:
