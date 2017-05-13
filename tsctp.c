@@ -659,7 +659,9 @@ int main(int argc, char **argv)
 		if (very_verbose) {
 			printf("Sending message number %lu.\n", i);
 		}
+#if !defined(LINUX)
 		flags |= SCTP_EOF;
+#endif
 		if (sctp_sendmsg(fd, buffer, length, NULL, 0, htonl(ppid), flags, sid, timetolive, 0) < 0) {
 			perror("sctp_sendmsg");
 		}
