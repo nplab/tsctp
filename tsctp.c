@@ -90,13 +90,14 @@ char Usage[] =
 #define BUFFERSIZE                  (1<<16)
 #define LINGERTIME                 1
 #define MAX_LOCAL_ADDR             10
+#define MAX_RUNPAUSETIMES          255
 
 static int verbose, very_verbose;
-static unsigned int done;
+static unsigned int pause_sending;
 
 void stop_sender(int sig)
 {
-	done = 1;
+	pause_sending = 1;
 }
 
 static void* handle_connection(void *arg)
@@ -198,7 +199,8 @@ int main(int argc, char **argv)
 	struct linger linger;
 	int fragpoint = 0;
 	unsigned int timetolive = 0;
-	unsigned int runtime = 0;
+	//unsigned int runtime = 0;
+	unsigned int runpausetimes[MAX_RUNPAUSETIMES], runpausetimes_num, runpausetimes_index;
 	int policy = 0;
 	struct sctp_setadaptation ind = {0};
 #ifdef SCTP_AUTH_CHUNK
@@ -314,7 +316,13 @@ int main(int argc, char **argv)
 				timetolive = atoi(optarg);
 				break;
 			case 'T':
-				runtime = atoi(optarg);
+				//runtime = atoi(optarg);
+				buffer = strtok(optarg, ",");
+				for (runpausetimes_num = 0; buffer != NULL && runpausetimes_num < MAX_RUNPAUSETIMES; runpausetimes_num++) {
+					runpausetimes[runpausetimes_num] = atoi(buffer);
+					buffer = strtok(NULL, ",");
+				}
+				runpausetimes_index = 0;
 				number_of_messages = 0;
 				break;
 			case 'u':
@@ -598,11 +606,11 @@ int main(int argc, char **argv)
 		}
 
 		i = 0;
-		done = 0;
+		pause_sending = 0;
 
-		if (runtime > 0) {
+		if (runpausetimes_num > 0) {
 			signal(SIGALRM, stop_sender);
-			alarm(runtime);
+			alarm(runpausetimes[0]);
 		}
 		if (very_verbose) {
 			ppid = 0;
@@ -640,7 +648,20 @@ int main(int argc, char **argv)
 			printf("Unknown PR-SCTP policy.\n");
 			break;
 		}
-		while (!done && ((number_of_messages == 0) || (i < (number_of_messages - 1)))) {
+		while ((number_of_messages == 0) || (i < (number_of_messages - 1))) {
+			if (pause_sending) {
+				runpausetimes_index++;
+				if (runpausetimes_index >= runpausetimes_num) {
+					break;
+				}
+				sleep(runpausetimes[runpausetimes_index]);
+				runpausetimes_index++;
+				if (runpausetimes_index >= runpausetimes_num) {
+					break;
+				}
+				signal(SIGALRM, stop_sender);
+				alarm(runpausetimes[runpausetimes_index]);
+			}
 			if (very_verbose) {
 				printf("Sending message number %lu.\n", i);
 			}
