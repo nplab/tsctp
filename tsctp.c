@@ -659,7 +659,7 @@ int main(int argc, char **argv)
 				if (runpausetimes_index >= runpausetimes_num) {
 					break;
 				}
-				signal(SIGALRM, stop_sender);
+				pause_sending = 0;
 				alarm(runpausetimes[runpausetimes_index]);
 			}
 			if (very_verbose) {
