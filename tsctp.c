@@ -60,6 +60,7 @@ char Usage[] =
 "Options:\n"
 "        -a      set adaptation layer indication\n"
 "        -A      chunk type to authenticate \n"
+"        -d      time in seconds after which a status update is printed\n"
 "        -D      turns Nagle off\n"
 "        -f      fragmentation point\n"
 #if defined(SCTP_INTERLEAVING_SUPPORTED)
@@ -93,6 +94,7 @@ char Usage[] =
 
 static int verbose, very_verbose;
 static unsigned int done;
+static unsigned int round_duration;
 
 void stop_sender(int sig)
 {
@@ -115,6 +117,9 @@ static void* handle_connection(void *arg)
 	unsigned int first_length;
 	int flags;
 	socklen_t len;
+	unsigned long round_bytes = 0;
+	struct timeval round_start;
+	timer_t round_timeout;
 
 	fd = *(int *) arg;
 	free(arg);
@@ -127,6 +132,13 @@ static void* handle_connection(void *arg)
 	n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, NULL, &len, &sinfo, &flags);
 	gettimeofday(&start_time, NULL);
 	first_length = 0;
+	if (round_duration > 0) {
+		gettimeofday(&round_start, NULL);
+		round_timeout = round_start.tv_sec + round_duration;
+		if (round_start.tv_usec > 0) {
+			round_timeout++;
+		}
+	}
 	while (n > 0) {
 		recv_calls++;
 		if (flags & MSG_NOTIFICATION) {
@@ -147,6 +159,21 @@ static void* handle_connection(void *arg)
 				messages++;
 				if (first_length == 0)
 					first_length = sum;
+				if (round_duration > 0)
+					round_bytes += first_length;
+			}
+		}
+		if (round_duration > 0 && round_timeout <= time()) {
+			gettimeofday(&now, NULL);
+			timersub(&now, &round_start, &diff_time);
+			seconds = diff_time.tv_sec + (double)diff_time.tv_usec/1000000.0;
+			fprintf(stdout, "throughput for the last %f seconds: %f B/s", seconds, (double)round_bytes / seconds)
+
+			round_bytes = 0;
+			gettimeofday(&round_start, NULL);
+			round_timeout = round_start.tv_sec + round_duration;
+			if (round_start.tv_usec > 0) {
+				round_timeout++;
 			}
 		}
 		flags = 0;
@@ -250,6 +277,9 @@ int main(int argc, char **argv)
 				}
 				break;
 #endif
+			case 'd':
+				round_duration = atoi(optarg);
+				break;
 			case 'D':
 				nodelay = 1;
 				break;
