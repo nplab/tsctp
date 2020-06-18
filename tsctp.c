@@ -70,10 +70,11 @@ char Usage[] =
 "        -L      local address\n"
 "        -n      number of messages sent (0 means infinite)/received\n"
 "        -p      port number\n"
+"        -P      partial reliability policy to use (0=none (default), 1=ttl, 2=rtx, 3=buf)\n"
 "        -R      socket recv buffer\n"
 "        -s      number of streams\n"
 "        -S      socket send buffer\n"
-"        -t      time to live for messages\n"
+"        -t      based on -P the time to live, number of retransmissions, or priority for messages\n"
 "        -T      time to send messages\n"
 "        -u      use unordered user messages\n"
 #if defined(SCTP_REMOTE_UDP_ENCAPS_PORT)
