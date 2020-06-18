@@ -60,6 +60,7 @@ char Usage[] =
 "Options:\n"
 "        -a      set adaptation layer indication\n"
 "        -A      chunk type to authenticate \n"
+"        -d      time in seconds after which a status update is printed\n"
 "        -D      turns Nagle off\n"
 "        -f      fragmentation point\n"
 #if defined(SCTP_INTERLEAVING_SUPPORTED)
@@ -69,10 +70,11 @@ char Usage[] =
 "        -L      local address\n"
 "        -n      number of messages sent (0 means infinite)/received\n"
 "        -p      port number\n"
+"        -P      partial reliability policy to use (0=none (default), 1=ttl, 2=rtx, 3=buf)\n"
 "        -R      socket recv buffer\n"
 "        -s      number of streams\n"
 "        -S      socket send buffer\n"
-"        -t      time to live for messages\n"
+"        -t      based on -P the time to live, number of retransmissions, or priority for messages\n"
 "        -T      time to send messages\n"
 "        -u      use unordered user messages\n"
 #if defined(SCTP_REMOTE_UDP_ENCAPS_PORT)
@@ -93,10 +95,20 @@ char Usage[] =
 
 static int verbose, very_verbose;
 static unsigned int done;
+static unsigned int round_duration;
 
 void stop_sender(int sig)
 {
 	done = 1;
+}
+
+static time_t calc_round_timeout(struct timeval round_start)
+{
+	time_t round_timeout = round_start.tv_sec + round_duration;
+	if (round_start.tv_usec >= 500000) {
+		round_timeout++;
+	}
+	return round_timeout;
 }
 
 static void* handle_connection(void *arg)
@@ -115,6 +127,9 @@ static void* handle_connection(void *arg)
 	unsigned int first_length;
 	int flags;
 	socklen_t len;
+	unsigned long round_bytes;
+	struct timeval round_start;
+	time_t round_timeout;
 
 	fd = *(int *) arg;
 	free(arg);
@@ -127,6 +142,11 @@ static void* handle_connection(void *arg)
 	n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, NULL, &len, &sinfo, &flags);
 	gettimeofday(&start_time, NULL);
 	first_length = 0;
+	if (round_duration > 0) {
+		round_bytes = 0;
+		gettimeofday(&round_start, NULL);
+		round_timeout = calc_round_timeout(round_start);
+	}
 	while (n > 0) {
 		recv_calls++;
 		if (flags & MSG_NOTIFICATION) {
@@ -147,7 +167,19 @@ static void* handle_connection(void *arg)
 				messages++;
 				if (first_length == 0)
 					first_length = sum;
+				if (round_duration > 0)
+					round_bytes += first_length;
 			}
+		}
+		if (round_duration > 0 && round_timeout <= time(NULL)) {
+			gettimeofday(&now, NULL);
+			timersub(&now, &round_start, &diff_time);
+			seconds = diff_time.tv_sec + (double)diff_time.tv_usec/1000000.0;
+			fprintf(stdout, "throughput for the last %f seconds: %f B/s\n", seconds, (double)round_bytes / seconds);
+
+			round_bytes = 0;
+			gettimeofday(&round_start, NULL);
+			round_timeout = calc_round_timeout(round_start);
 		}
 		flags = 0;
 		len = (socklen_t)0;
@@ -223,6 +255,7 @@ int main(int argc, char **argv)
 	port               = DEFAULT_PORT;
 	verbose            = 0;
 	very_verbose       = 0;
+	round_duration     = 0;
 
 	memset((void *) &remote_addr, 0, sizeof(remote_addr));
 
@@ -230,7 +263,7 @@ int main(int argc, char **argv)
 #ifdef SCTP_AUTH_CHUNK
 	                               "A:"
 #endif
-	                               "Df:"
+	                               "d:Df:"
 #if defined(SCTP_INTERLEAVING_SUPPORTED)
                                        "I"
 #endif
@@ -250,6 +283,9 @@ int main(int argc, char **argv)
 				}
 				break;
 #endif
+			case 'd':
+				round_duration = atoi(optarg);
+				break;
 			case 'D':
 				nodelay = 1;
 				break;
