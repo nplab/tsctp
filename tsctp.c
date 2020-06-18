@@ -101,6 +101,15 @@ void stop_sender(int sig)
 	done = 1;
 }
 
+static time_t calc_round_timeout(struct timeval round_start)
+{
+	time_t round_timeout = round_start.tv_sec + round_duration;
+	if (round_start.tv_usec >= 500000) {
+		round_timeout++;
+	}
+	return round_timeout;
+}
+
 static void* handle_connection(void *arg)
 {
 	struct sctp_sndrcvinfo sinfo;
@@ -117,9 +126,9 @@ static void* handle_connection(void *arg)
 	unsigned int first_length;
 	int flags;
 	socklen_t len;
-	unsigned long round_bytes = 0;
+	unsigned long round_bytes;
 	struct timeval round_start;
-	timer_t round_timeout;
+	time_t round_timeout;
 
 	fd = *(int *) arg;
 	free(arg);
@@ -133,11 +142,9 @@ static void* handle_connection(void *arg)
 	gettimeofday(&start_time, NULL);
 	first_length = 0;
 	if (round_duration > 0) {
+		round_bytes = 0;
 		gettimeofday(&round_start, NULL);
-		round_timeout = round_start.tv_sec + round_duration;
-		if (round_start.tv_usec > 0) {
-			round_timeout++;
-		}
+		round_timeout = calc_round_timeout(round_start);
 	}
 	while (n > 0) {
 		recv_calls++;
@@ -163,18 +170,15 @@ static void* handle_connection(void *arg)
 					round_bytes += first_length;
 			}
 		}
-		if (round_duration > 0 && round_timeout <= time()) {
+		if (round_duration > 0 && round_timeout <= time(NULL)) {
 			gettimeofday(&now, NULL);
 			timersub(&now, &round_start, &diff_time);
 			seconds = diff_time.tv_sec + (double)diff_time.tv_usec/1000000.0;
-			fprintf(stdout, "throughput for the last %f seconds: %f B/s", seconds, (double)round_bytes / seconds)
+			fprintf(stdout, "throughput for the last %f seconds: %f B/s\n", seconds, (double)round_bytes / seconds);
 
 			round_bytes = 0;
 			gettimeofday(&round_start, NULL);
-			round_timeout = round_start.tv_sec + round_duration;
-			if (round_start.tv_usec > 0) {
-				round_timeout++;
-			}
+			round_timeout = calc_round_timeout(round_start);
 		}
 		flags = 0;
 		len = (socklen_t)0;
@@ -250,6 +254,7 @@ int main(int argc, char **argv)
 	port               = DEFAULT_PORT;
 	verbose            = 0;
 	very_verbose       = 0;
+	round_duration     = 0;
 
 	memset((void *) &remote_addr, 0, sizeof(remote_addr));
 
@@ -257,7 +262,7 @@ int main(int argc, char **argv)
 #ifdef SCTP_AUTH_CHUNK
 	                               "A:"
 #endif
-	                               "Df:"
+	                               "d:Df:"
 #if defined(SCTP_INTERLEAVING_SUPPORTED)
                                        "I"
 #endif
